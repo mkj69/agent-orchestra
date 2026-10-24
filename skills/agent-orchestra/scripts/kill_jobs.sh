@@ -13,25 +13,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ "$sig" == TERM || "$sig" == INT || "$sig" == KILL ]] || usage
-# Compare the pattern as data in Bash. No pgrep or pkill command line can self match.
-declare -A exclude=()
-pid=$$
-while [[ "$pid" =~ ^[0-9]+$ && "$pid" -gt 1 ]]; do
-  exclude[$pid]=1
-  pid=$(awk '{print $4}' "/proc/$pid/stat" 2>/dev/null || true)
-done
-for path in /proc/[0-9]*/cmdline; do
-  pid=${path#/proc/}; pid=${pid%%/*}
-  [[ -z "${exclude[$pid]:-}" ]] || continue
-  [[ -r "$path" ]] || continue
-  comm=$(cat "/proc/$pid/comm" 2>/dev/null || true)
-  [[ "$comm" == codex* || "$comm" == python* || "$comm" == chrome* || "$comm" == chromium* ]] || continue
-  cmd=$(tr '\0' ' ' < "$path" 2>/dev/null || true)
+# pgrep reads command lines once and skips inaccessible processes. Match the
+# user's pattern literally in Bash, so regex characters in it stay literal.
+while IFS= read -r line; do
+  [[ "$line" == *' '* ]] || continue
+  pid=${line%% *}
+  cmd=${line#* }
+  [[ "$pid" =~ ^[0-9]+$ ]] || continue
+  [[ "$pid" != "$$" && "$pid" != "$PPID" ]] || continue
   [[ "$cmd" == *"$pattern"* ]] || continue
+  IFS= read -r comm < "/proc/$pid/comm" 2>/dev/null || continue
+  [[ "$comm" == codex* || "$comm" == python* || "$comm" == chrome* || "$comm" == chromium* ]] || continue
   if (( execute )); then
-    kill -s "$sig" "$pid"
+    kill -s "$sig" "$pid" 2>/dev/null || continue
     printf 'sent %s to %s (%s)\n' "$sig" "$pid" "$comm"
   else
     printf 'would send %s to %s (%s)\n' "$sig" "$pid" "$comm"
   fi
-done
+done < <(pgrep -u "$(id -u)" -f -a -- .)

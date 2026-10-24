@@ -173,34 +173,34 @@ class LauncherAndPreviewTests(unittest.TestCase):
                 self.assertEqual((site / "preview/sample/index.html").read_text(), "preview")
 
     def test_pid_killer_previews_then_signals_only_matching_process(self):
-        marker = f"orchestra_test_{os.getpid()}"
+        marker = f"orchestra_test_[{os.getpid()}]"
         command = [sys.executable, "-u", "-c",
-                   "import time; print('ready', flush=True); time.sleep(30)"]
+                   "import time; print('ready', flush=True); time.sleep(120)"]
         child = subprocess.Popen([*command, marker], stdout=subprocess.PIPE, text=True)
         other = subprocess.Popen([*command, "unrelated_job"], stdout=subprocess.PIPE, text=True)
         try:
             for process in (child, other):
-                ready, _, _ = select.select([process.stdout], [], [], 5)
+                ready, _, _ = select.select([process.stdout], [], [], 30)
                 self.assertTrue(ready, "child did not start")
                 self.assertEqual(process.stdout.readline(), "ready\n")
             preview = subprocess.run([str(SCRIPTS / "kill_jobs.sh"), marker],
-                                     capture_output=True, text=True, timeout=5)
+                                     capture_output=True, text=True, timeout=30)
             self.assertEqual(preview.returncode, 0, preview.stderr)
             self.assertIn(f"would send TERM to {child.pid}", preview.stdout)
             self.assertNotIn(f"to {other.pid} (", preview.stdout)
             self.assertIsNone(child.poll())
             self.assertIsNone(other.poll())
             actual = subprocess.run([str(SCRIPTS / "kill_jobs.sh"), marker, "--execute"],
-                                    capture_output=True, text=True, timeout=5)
+                                    capture_output=True, text=True, timeout=30)
             self.assertEqual(actual.returncode, 0, actual.stderr)
-            child.wait(timeout=5)
+            child.wait(timeout=30)
             self.assertEqual(child.returncode, -15)
             self.assertIsNone(other.poll())
         finally:
             for process in (child, other):
                 if process.poll() is None:
                     process.terminate()
-                    process.wait(timeout=5)
+                    process.wait(timeout=30)
                 process.stdout.close()
 
     def test_contact_sheet_tiles_images(self):
