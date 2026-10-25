@@ -204,7 +204,10 @@ class LauncherAndPreviewTests(unittest.TestCase):
                 process.stdout.close()
 
     def test_contact_sheet_tiles_images(self):
-        from PIL import Image
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow is not installed; install the images extra")
 
         sheet = load("contact_sheet")
         with tempfile.TemporaryDirectory() as temp:
