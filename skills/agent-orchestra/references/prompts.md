@@ -1,6 +1,6 @@
 # Prompt templates
 
-Fill each placeholder with real paths and a bounded task. Include the shared contract when tasks must interoperate. Quote heredoc delimiters when writing prompt files.
+Use real paths and a bounded task in each prompt. Include the shared contract when tasks must interoperate. Quote heredoc delimiters when writing prompt files.
 
 ## Write task preamble
 

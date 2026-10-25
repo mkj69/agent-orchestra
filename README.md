@@ -16,6 +16,16 @@ Tested integration lines -> final branch -> verification -> release
 
 ## Install
 
+Python 3.10 or newer is required for the Python scripts. From this repository root, install the optional command that locates the skill files:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -e .
+.venv/bin/agent-orchestra skill-path
+```
+
+`python -m agent_orchestra --help` and `agent-orchestra --help` show the same command help. For screenshot contact sheets, install `.[images]` to include Pillow.
+
 Copy the skill directory into your Claude skills directory. For a project local Claude setup:
 
 ```sh
@@ -45,8 +55,8 @@ The dashboard writes `notes/dashboard/index.html` by default. Its optional JSON 
 
 ```json
 {
-  "jobs": {"task01": "Example implementation"},
-  "leaders": {"leader01": {"label": "Integration", "path": "/path/to/task.output"}}
+  "jobs": {"task01": "Implement feature"},
+  "leaders": {"leader01": {"label": "Integration", "path": "notes/leader01.output"}}
 }
 ```
 
