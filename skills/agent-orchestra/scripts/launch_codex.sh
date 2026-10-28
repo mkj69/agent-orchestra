@@ -14,7 +14,11 @@ board=${ORCH_BOARD:-"$repo/notes/board.md"}
 notes=${ORCH_NOTES_DIR:-"$(dirname "$board")"}
 codex=${ORCH_CODEX_BIN:-codex}
 mode=${ORCH_MODE:-workspace-write}
+duration=${ORCH_JOB_TIMEOUT:-3h}
+no_commit=${ORCH_WORKER_NO_COMMIT:-0}
 [[ "$mode" == workspace-write || "$mode" == read-only ]] || { echo 'ORCH_MODE must be workspace-write or read-only' >&2; exit 2; }
+[[ "$no_commit" == 0 || "$no_commit" == 1 ]] || { echo 'ORCH_WORKER_NO_COMMIT must be 0 or 1' >&2; exit 2; }
+timeout "$duration" true || { echo 'Invalid ORCH_JOB_TIMEOUT' >&2; exit 2; }
 command -v "$codex" >/dev/null || { echo "Codex executable unavailable: $codex" >&2; exit 2; }
 [[ -d "$repo/.git" ]] || { echo 'ORCH_REPO must have a .git directory' >&2; exit 2; }
 git -C "$repo" rev-parse --verify "$base^{commit}" >/dev/null
@@ -29,9 +33,13 @@ log="$outdir/$task.log"
 out="$outdir/$task.out"
 : > "$log"
 : > "$out"
+git_access=()
+if [[ "$no_commit" == 0 ]]; then
+  git_access=(--add-dir "$repo/.git")
+fi
 (
   cd "$wt"
-  nohup "$codex" exec -s "$mode" -C "$wt" --add-dir "$repo/.git" --add-dir /tmp --add-dir "$notes" -o "$out" - < "$prompt" > "$log" 2>&1 &
+  nohup timeout "$duration" "$codex" exec -s "$mode" -C "$wt" "${git_access[@]}" --add-dir /tmp --add-dir "$notes" -o "$out" - < "$prompt" > "$log" 2>&1 &
   printf '%s\n' "$!" > "$outdir/$task.pid"
 )
 printf 'PID %s\nOUT %s\nLOG %s\nWORKTREE %s\nBRANCH %s\n' "$(cat "$outdir/$task.pid")" "$out" "$log" "$wt" "$branch"

@@ -7,6 +7,12 @@ description: Coordinate a large, concurrent build with a human facing coordinato
 
 Use this skill when several independent tasks, reviews, and integration steps must advance together. Adapt the number of agents to the work and the available permissions. The user's instructions and the current environment's agent policy control whether delegation is allowed. This skill does not itself authorize starting agents, compute, publication, or external actions.
 
+## Quality-heavy creative work
+
+For scene-based visual deliverables (for example rebuilding an animated explainer video) that need independent, frame-by-frame judgment, use **a Claude lead with a team of Codex workers**. The lead runs headless, prepares a shared visual/scene contract, launches isolated workers on disjoint scenes in their own git worktrees, reviews and commits their edits, and renders outside their sandbox when Chrome is unavailable to them. The supervisor monitors the lead rather than micromanaging workers and independently verifies the final media before merging. Use [the project-neutral lead brief template](references/creative-lead-brief.md) for locations, user requirements, quality bar, team rules, review loop, rules, and report. Do not use this pattern for a small edit or where delegation is not authorized.
+
+Route **new** lead jobs by quota: subscription until about 80% of weekly usage, then a configured API gateway. `scripts/route_lead.sh` is a minimal launcher; set `ORCH_WEEKLY_USAGE_PERCENT` from an actual usage check, `ORCH_API_CLAUDE` for the gateway, and pass headless Claude flags; it does not discover quota or manage credentials. Always bound agent jobs with `timeout` (`scripts/launch_codex.sh` uses `ORCH_JOB_TIMEOUT`, default `3h`). If worker sandboxes cannot start Chrome or commit, do not widen their permissions: the lead runs `scripts/render_requests.py` on the trusted host and commits reviewed work. See the template and [lessons.md](references/lessons.md).
+
 ## Roles
 
 - **Coordinator:** Speak with the user, record decisions, assign ownership, maintain the supervision log, and route merges through integrators. Send short Chinese updates when the user prefers Chinese. Ask one decision question at a time.
@@ -17,11 +23,11 @@ Use this skill when several independent tasks, reviews, and integration steps mu
 
 1. **Plan:** Break the outcome into tasks with owners, files, dependencies, evidence, and a release gate. Identify work that can start from a snapshot. Record decisions in the supervision log.
 2. **Contract:** Before parallel features meet, write one shared schema and registration contract. Include it in every relevant prompt. See [prompts.md](references/prompts.md).
-3. **Dispatch:** Create a worktree for each code task. Use `scripts/launch_codex.sh` when its assumptions fit. Append a start record to the shared board before editing, then an end record with status and commit. Keep main branch in-place edits to disjoint documentation files. Stage only owned files.
+3. **Dispatch:** Create a worktree for each code task. Use `scripts/launch_codex.sh` when its assumptions fit. Keep one reservation table for shared content (task, worktree, files/scenes, start/release) and prevent overlapping active claims. Append a start record to the shared board before editing, then an end record with status and commit. Keep main branch in-place edits to disjoint documentation files. Stage only owned files.
 4. **Monitor:** Check output files, logs, the board, and a dashboard. An output file with content means a Codex run returned, not that its work passed review. Every 30 minutes, run the supervision checklist, verify reports, dispatch newly independent tasks, and update the log. See [communication.md](references/communication.md).
 5. **Integrate:** Assign one integrator per line. Merge one branch at a time and test after each. If queues grow, start another line from the same snapshot and later merge the lines. Pre-merge small fixes into one tested branch. Regenerate generated files and guard stable defaults with hashes. See [integration.md](references/integration.md).
 6. **Verify:** Start verification tooling while features are built, then run it on integrated snapshots. Cover independent computation, properties, docs and commands, a fresh install, publication dry run, browser pages, and layout. See [verification.md](references/verification.md).
-7. **Release:** Review the verified candidate, record remaining risks and user decisions, and perform only actions authorized for this task.
+7. **Release:** Review the verified candidate, record remaining risks and user decisions, and perform only actions authorized for this task. For creative media, the supervisor independently inspects contact sheets sampled from the *final media files* in both themes and checks displayed numbers by hand before merging.
 
 ## Budget modes
 
@@ -31,7 +37,7 @@ Use this skill when several independent tasks, reviews, and integration steps mu
 
 ## Failure handling
 
-- A changed requirement cannot be sent to a running `codex exec` job. If the change is urgent, identify its PID from `/proc`, stop that PID, append the change to the task file, and relaunch in the same worktree with the resume preamble. Use `scripts/kill_jobs.sh` rather than `pkill -f`.
+- A changed requirement cannot be sent to a running `codex exec` job. If urgent, verify the job's recorded PID (`scripts/launch_codex.sh` records the `timeout` process) and signal that PID; if the PID file is unavailable, inspect `/proc` and use `scripts/kill_jobs.sh` to preview and signal a verified worker. Never use `pkill -f`: its pattern can match the supervisor's own shell. Append the change to the task file and relaunch in the same worktree with the resume preamble.
 - For a crash or limit, recover the original Agent prompt and later messages from transcript JSONL with `scripts/extract_prompts.py`. Inspect the worktree, preserve useful edits as a patch, and use the resume preamble.
 - If a sandbox blocks commits through linked worktree metadata, leave the edits intact and let the leader commit. Do not widen permissions without authorization.
 - If the user sees only one preview port, mount previews under the main site's `preview/` path and reattach them after each rebuild. Use `scripts/rebuild_with_previews.sh`.

@@ -6,6 +6,14 @@ Run the examples from the repository root. Replace sample task names and paths w
 
 **Symptom:** Agents overwrite edits or stage unrelated work. **Cause:** They share a checkout or file. **Fix:** Give each code task a branch and worktree. Allow in place edits only for disjoint documentation files, and stage owned files by name. **Example:** `git worktree add ../worktrees/parser -b task/parser HEAD && git -C ../worktrees/parser add src/parser.py tests/test_parser.py`
 
+## Reserve shared content centrally
+
+**Symptom:** Parallel scene workers edit the same helper, scene, or generated asset despite separate worktrees. **Cause:** Ownership was split across prompts or boards without a single live view. **Fix:** Maintain one reservation table (`task | worktree | files/scenes | start | release`); check for overlap before dispatch, assign shared changes to the lead, and release only after reviewed integration. Do not start colliding writers.
+
+## Route bounded jobs by quota
+
+**Symptom:** A long creative lead exhausts subscription capacity, or runs indefinitely. **Cause:** Jobs were started without checking weekly quota or bounding runtime. **Fix:** Check actual usage before each *new* job; run on subscription below about 80%, then on a configured API gateway. Use `scripts/route_lead.sh` for a headless Claude job and `scripts/launch_codex.sh` for workers; both wrap their agents in `timeout`. Set explicit limits for other launchers too. Do not print credentials or silently move a running session.
+
 ## Grant linked worktree metadata deliberately
 
 **Symptom:** A worker can edit code but cannot commit. **Cause:** The linked worktree stores Git metadata in the main repository. Its index lock may still be read only. **Fix:** Add the main `.git` directory, the board directory, and `/tmp` to writable directories. If a commit still fails, leave the edits for the leader to commit. **Example:** `codex exec -s workspace-write -C ../worktrees/parser --add-dir "$PWD/.git" --add-dir "$PWD/notes" --add-dir /tmp -o notes/jobs/parser.out - < tasks/parser.txt`
