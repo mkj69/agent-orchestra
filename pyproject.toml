@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agent-orchestra"
-version = "0.2.0"
+version = "0.3.0"
 description = "A reusable skill and scripts for coordinating Codex workers"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,6 +30,7 @@ where = ["src"]
 "share/agent-orchestra/references" = [
   "skills/agent-orchestra/references/creative-lead-brief.md",
   "skills/agent-orchestra/references/communication.md",
+  "skills/agent-orchestra/references/coordinator-led-codex.md",
   "skills/agent-orchestra/references/integration.md",
   "skills/agent-orchestra/references/lessons.md",
   "skills/agent-orchestra/references/prompts.md",

@@ -13,6 +13,10 @@ outdir=${ORCH_OUTPUT_DIR:-"$repo/notes/jobs"}
 board=${ORCH_BOARD:-"$repo/notes/board.md"}
 notes=${ORCH_NOTES_DIR:-"$(dirname "$board")"}
 codex=${ORCH_CODEX_BIN:-codex}
+if [[ -n ${ORCH_PREFER_API_FILE:-} && -f ${ORCH_PREFER_API_FILE} ]]; then
+  codex=${ORCH_API_CODEX_BIN:-}
+  [[ -n "$codex" ]] || { echo 'Set ORCH_API_CODEX_BIN to an API-authenticated Codex launcher' >&2; exit 2; }
+fi
 mode=${ORCH_MODE:-workspace-write}
 duration=${ORCH_JOB_TIMEOUT:-3h}
 no_commit=${ORCH_WORKER_NO_COMMIT:-0}

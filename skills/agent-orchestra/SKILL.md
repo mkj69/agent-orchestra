@@ -9,9 +9,17 @@ Use this skill when several independent tasks, reviews, and integration steps mu
 
 ## Quality-heavy creative work
 
+### Coordinator-led Codex team (October 28 variant)
+
+When the user asks for a coordinator-led team, the **main session is the lead**: do not start a separate lead agent. The coordinator owns the shared brief, review decisions, integration, and final artifact. Use separate worker worktrees and disjoint file/scene ownership. Give every worker the *same* common brief (requirements, visual style, interfaces, acceptance checks) plus its own file scope and deliverable. A shared-core worker may own the global helpers; merge that branch into each scene branch **before round b**, so scene workers can review and revise against the final shared look.
+
+Render or collect each worker's frames/screenshots, inspect them yourself, and return concrete **numbered** notes (file/scene, timestamp or screenshot, issue, requested correction) to the **same worktree** for round b. Review the revised frames, integrate reviewed branches into one branch, run checks, then render the integrated artifact **once** and independently inspect that final artifact. Draft screenshots and worker reports are not final-media evidence. See [the coordinator-led brief](references/coordinator-led-codex.md) for the exact loop. This is a variant of, not a prerequisite for, the separate Claude-lead pattern below.
+
 For scene-based visual deliverables (for example rebuilding an animated explainer video) that need independent, frame-by-frame judgment, use **a Claude lead with a team of Codex workers**. The lead runs headless, prepares a shared visual/scene contract, launches isolated workers on disjoint scenes in their own git worktrees, reviews and commits their edits, and renders outside their sandbox when Chrome is unavailable to them. The supervisor monitors the lead rather than micromanaging workers and independently verifies the final media before merging. Use [the project-neutral lead brief template](references/creative-lead-brief.md) for locations, user requirements, quality bar, team rules, review loop, rules, and report. Do not use this pattern for a small edit or where delegation is not authorized.
 
 Route **new** lead jobs by quota: subscription until about 80% of weekly usage, then a configured API gateway. `scripts/route_lead.sh` is a minimal launcher; set `ORCH_WEEKLY_USAGE_PERCENT` from an actual usage check, `ORCH_API_CLAUDE` for the gateway, and pass headless Claude flags; it does not discover quota or manage credentials. Always bound agent jobs with `timeout` (`scripts/launch_codex.sh` uses `ORCH_JOB_TIMEOUT`, default `3h`). If worker sandboxes cannot start Chrome or commit, do not widen their permissions: the lead runs `scripts/render_requests.py` on the trusted host and commits reviewed work. See the template and [lessons.md](references/lessons.md).
+
+If the user requests API-key routing for **all new jobs**, create a switch file and set `ORCH_PREFER_API_FILE` to its path for both launchers; configure `ORCH_API_CLAUDE` and `ORCH_API_CODEX_BIN` as API-authenticated launchers without exposing credentials in prompts or logs. The switch overrides the percentage even if it later reads low after a weekly reset. It affects only new processes; `launch_codex.sh` fails before worktree creation if the API Codex launcher is missing. See [coordinator-led-codex.md](references/coordinator-led-codex.md).
 
 ## Roles
 

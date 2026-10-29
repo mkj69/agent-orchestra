@@ -1,5 +1,7 @@
 # Template: Claude lead with Codex workers
 
+For the main-session-as-lead variant, use [coordinator-led-codex.md](coordinator-led-codex.md) instead; do not start a separate lead when the user asks the coordinator to lead.
+
 Copy this brief into a task file and replace placeholders. This is a template, not permission to delegate or publish; follow the user's and host's agent policies. Do not paste credentials into prompts or logs.
 
 ## Where things are

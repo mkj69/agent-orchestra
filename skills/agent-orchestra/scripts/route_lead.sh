@@ -1,16 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ $# -lt 1 || ! ${ORCH_WEEKLY_USAGE_PERCENT:-} =~ ^[0-9]+$ ]]; then
+if [[ $# -lt 1 ]]; then
   echo 'Usage: ORCH_WEEKLY_USAGE_PERCENT=0..100 route_lead.sh CLAUDE_ARGS...' >&2
   exit 2
 fi
-usage=$((10#$ORCH_WEEKLY_USAGE_PERCENT))
-if (( usage > 100 )); then
-  echo 'ORCH_WEEKLY_USAGE_PERCENT must be between 0 and 100' >&2
-  exit 2
+prefer_api=${ORCH_PREFER_API_FILE:-}
+if [[ -n "$prefer_api" && -f "$prefer_api" ]]; then
+  use_api=1
+else
+  if [[ ! ${ORCH_WEEKLY_USAGE_PERCENT:-} =~ ^[0-9]+$ ]]; then
+    echo 'Set ORCH_WEEKLY_USAGE_PERCENT=0..100 or create ORCH_PREFER_API_FILE' >&2
+    exit 2
+  fi
+  usage=$((10#$ORCH_WEEKLY_USAGE_PERCENT))
+  if (( usage > 100 )); then
+    echo 'ORCH_WEEKLY_USAGE_PERCENT must be between 0 and 100' >&2
+    exit 2
+  fi
+  use_api=$((usage >= 80))
 fi
 launcher=${ORCH_SUBSCRIPTION_CLAUDE:-claude}
-if (( usage >= 80 )); then
+if (( use_api )); then
   launcher=${ORCH_API_CLAUDE:-}
   if [[ -z "$launcher" ]]; then
     echo 'Set ORCH_API_CLAUDE to a configured API-gateway launcher' >&2

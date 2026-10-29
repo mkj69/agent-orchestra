@@ -47,6 +47,55 @@ class BoardTests(unittest.TestCase):
             self.assertNotIn("bad\nrecord", text)
 
 
+class RouterTests(unittest.TestCase):
+    def test_prefer_api_file_overrides_quota_and_removal_restores_subscription(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            api = root / "api.sh"
+            sub = root / "sub.sh"
+            for path, label in ((api, "api"), (sub, "subscription")):
+                path.write_text(f'#!/bin/sh\nprintf "%s %s\\n" {label} "$1"\n')
+                path.chmod(0o755)
+            flag = root / "prefer-api"
+            env = {**os.environ, "ORCH_WEEKLY_USAGE_PERCENT": "20",
+                   "ORCH_PREFER_API_FILE": str(flag), "ORCH_API_CLAUDE": str(api),
+                   "ORCH_SUBSCRIPTION_CLAUDE": str(sub)}
+
+            def route():
+                return subprocess.run([str(SCRIPTS / "route_lead.sh"), "job"], env=env,
+                                      capture_output=True, text=True)
+
+            self.assertEqual(route().stdout.strip(), "subscription job")
+            flag.touch()
+            self.assertEqual(route().stdout.strip(), "api job")
+            env.pop("ORCH_WEEKLY_USAGE_PERCENT")
+            self.assertEqual(route().stdout.strip(), "api job")
+            env.pop("ORCH_API_CLAUDE")
+            self.assertIn("ORCH_API_CLAUDE", route().stderr)
+            flag.unlink()
+            self.assertIn("ORCH_WEEKLY_USAGE_PERCENT", route().stderr)
+
+    def test_api_switch_requires_worker_launcher_before_creating_worktree(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repo = root / "repo"
+            repo.mkdir()
+            subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+            subprocess.run(["git", "-C", str(repo), "-c", "user.name=Test", "-c",
+                            "user.email=test@example.invalid", "commit", "--allow-empty", "-qm", "base"], check=True)
+            prompt = root / "prompt.txt"
+            prompt.write_text("Build\n")
+            flag = root / "prefer-api"
+            flag.touch()
+            env = {**os.environ, "ORCH_REPO": str(repo), "ORCH_PREFER_API_FILE": str(flag),
+                   "ORCH_WORKTREES": str(root / "worktrees")}
+            command = [str(SCRIPTS / "launch_codex.sh"), "task01", str(prompt)]
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("ORCH_API_CODEX_BIN", result.stderr)
+            self.assertFalse((root / "worktrees/task01").exists())
+
+
 class DashboardTests(unittest.TestCase):
     def test_proc_argv_exact_output_and_state(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -151,6 +200,22 @@ class LauncherAndPreviewTests(unittest.TestCase):
                 import time
                 time.sleep(0.01)
             self.assertEqual(output.read_text(), "returned\n")
+            api = root / "api-codex"
+            api.write_text(codex.read_text().replace("returned", "api returned"))
+            api.chmod(0o755)
+            flag = root / "prefer-api"
+            flag.touch()
+            env.update(ORCH_PREFER_API_FILE=str(flag), ORCH_API_CODEX_BIN=str(api))
+            result = subprocess.run([str(SCRIPTS / "launch_codex.sh"), "task02", str(prompt)],
+                                    env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            api_output = root / "jobs/task02.out"
+            for _ in range(100):
+                if api_output.exists() and api_output.stat().st_size:
+                    break
+                import time
+                time.sleep(0.01)
+            self.assertEqual(api_output.read_text(), "api returned\n")
 
     def test_rebuild_reattaches_preview_after_output_is_replaced(self):
         with tempfile.TemporaryDirectory() as temp:

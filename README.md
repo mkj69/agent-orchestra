@@ -2,6 +2,8 @@
 
 A reusable skill for coordinating a large build with a coordinator, judgment focused leaders, and isolated Codex workers. It includes task prompts, integration and verification guidance, a shared board, a dashboard, and small operational scripts.
 
+When requested, the **coordinator-led Codex team** uses the main session as lead: no separate lead agent. The separate headless Claude-lead pattern remains available for other projects.
+
 ```text
 User
   |
@@ -100,6 +102,20 @@ The dashboard writes `notes/dashboard/index.html` by default. Its optional JSON 
 Set `ORCH_CONFIG` to that file, then run `dashboard.py` continuously. Serve the output directory with `python3 -m http.server 8766 --directory notes/dashboard` if local port access is available. `restart_dashboard.sh` restarts only the matching Python process and writes a PID file.
 
 ## Lessons in brief
+
+For the October 28 coordinator-led creative variant, split worker assignments by owned files/scenes and send each the identical common brief **plus** its specific assignment. The main session inspects each worker's frames/screenshots and sends concrete numbered notes back to the **same worktree** for round b. Merge the shared-core worker's branch into scene branches **before** that round so revised frames show the final shared look. Review round b, integrate all accepted changes on **one** branch, run checks, then render once and review the **final artifact** independently. The [coordinator-led guide](skills/agent-orchestra/references/coordinator-led-codex.md) gives the full loop.
+
+If the user asks for all **new** jobs to use an API key, set `ORCH_API_CLAUDE` to your configured API launcher and `ORCH_PREFER_API_FILE` to a shared switch-file path; create the file before routing new lead jobs. For example:
+
+```sh
+export ORCH_PREFER_API_FILE="$PWD/notes/prefer-api"
+export ORCH_API_CLAUDE=/path/to/api-launcher
+export ORCH_API_CODEX_BIN=/path/to/api-authenticated-codex-launcher
+mkdir -p notes && touch "$ORCH_PREFER_API_FILE"
+skills/agent-orchestra/scripts/route_lead.sh -p "$(cat tasks/lead.md)"
+```
+
+While the file exists, the router chooses API even if the weekly subscription reading drops after a reset, which otherwise could silently pull jobs back to subscription. `launch_codex.sh` uses `ORCH_API_CODEX_BIN` instead of its normal Codex executable and fails before making a worktree if it is unset. Configure that wrapper's API authentication separately and verify it before launching workers. Removing the file restores quota-based lead routing (`ORCH_WEEKLY_USAGE_PERCENT` required) and the normal worker launcher. Existing processes are unchanged. Never store keys in the switch file or briefs.
 
 - Give code tasks separate worktrees, branches, and file ownership.
 - Reserve shared content in one table before launching parallel writers; never overlap active claims.

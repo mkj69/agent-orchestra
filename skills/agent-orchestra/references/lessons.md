@@ -14,6 +14,8 @@ Run the examples from the repository root. Replace sample task names and paths w
 
 **Symptom:** A long creative lead exhausts subscription capacity, or runs indefinitely. **Cause:** Jobs were started without checking weekly quota or bounding runtime. **Fix:** Check actual usage before each *new* job; run on subscription below about 80%, then on a configured API gateway. Use `scripts/route_lead.sh` for a headless Claude job and `scripts/launch_codex.sh` for workers; both wrap their agents in `timeout`. Set explicit limits for other launchers too. Do not print credentials or silently move a running session.
 
+When the user requests API for every new job, set `ORCH_PREFER_API_FILE` to a switch file, create it, and configure `ORCH_API_CLAUDE` and `ORCH_API_CODEX_BIN` as API-authenticated launchers. The router honors the file even if weekly usage reads low after a reset; that reading otherwise silently routes jobs back to subscription. `launch_codex.sh` uses the configured API Codex launcher or fails closed. See [coordinator-led-codex.md](coordinator-led-codex.md).
+
 ## Grant linked worktree metadata deliberately
 
 **Symptom:** A worker can edit code but cannot commit. **Cause:** The linked worktree stores Git metadata in the main repository. Its index lock may still be read only. **Fix:** Add the main `.git` directory, the board directory, and `/tmp` to writable directories. If a commit still fails, leave the edits for the leader to commit. **Example:** `codex exec -s workspace-write -C ../worktrees/parser --add-dir "$PWD/.git" --add-dir "$PWD/notes" --add-dir /tmp -o notes/jobs/parser.out - < tasks/parser.txt`
